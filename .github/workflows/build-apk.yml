@@ -28,7 +28,7 @@ jobs:
 
       - name: Extract application
         run: |
-          unzip PrimeWay_Lollybird_Petty_Cash_Android_V6.zip -d source
+          unzip PrimeWay_Lollybird_Petty_Cash_Android_V7.zip -d source
 
       - name: Install Android build tools
         run: |
