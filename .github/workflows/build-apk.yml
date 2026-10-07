@@ -28,23 +28,22 @@ jobs:
 
       - name: Extract application
         run: |
-          unzip PrimeWay_Lollybird_Petty_Cash_Android_V5.zip -d source
+          unzip PrimeWay_Lollybird_Petty_Cash_Android_V6.zip -d source
 
       - name: Install Android build tools
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
             "platforms;android-35" "build-tools;35.0.0"
 
+      - name: Keep test APK signing key for future updates
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: primeway-android-debug-signing-v6
+
       - name: Build APK
         working-directory: source/PrimeWay_Petty_Cash_Android
-        run: |
-          cat >> app/build.gradle <<'EOF'
-
-          dependencies {
-              implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
-          }
-          EOF
-          gradle --no-daemon assembleDebug
+        run: gradle --no-daemon assembleDebug
 
       - name: Save downloadable APK
         uses: actions/upload-artifact@v4
