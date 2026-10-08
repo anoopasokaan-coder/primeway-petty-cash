@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build PrimeWay Fresh Android V10
 
 on:
   workflow_dispatch:
@@ -13,40 +13,37 @@ jobs:
     steps:
       - name: Download repository
         uses: actions/checkout@v6
-
       - name: Set up Java
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.9'
-
-      - name: Extract application
-        run: unzip PrimeWay_Lollybird_Petty_Cash_Android_V9.zip -d source
-
+      - name: Extract fresh application
+        run: unzip PrimeWay_Lollybird_Petty_Cash_Android_V10_Fresh.zip -d source
       - name: Install Android build tools
         run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
-
-      - name: Keep APK signing key for updates
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+      - name: Restore fresh app signing key
+        id: signing
         uses: actions/cache@v4
         with:
           path: ~/.android/debug.keystore
-          key: primeway-android-debug-signing-v6
-
-      - name: Build APK
+          key: primeway-fresh-android-signing-v10
+      - name: Create key for first fresh build
+        if: steps.signing.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+      - name: Test and build APK
         working-directory: source/PrimeWay_Petty_Cash_Android
-        run: gradle --no-daemon assembleDebug
-
+        run: gradle --no-daemon testDebugUnitTest assembleDebug
       - name: Save downloadable APK
         uses: actions/upload-artifact@v4
         with:
-          name: PrimeWay-Android-APK
+          name: PrimeWay-Fresh-Android-V10
           path: source/PrimeWay_Petty_Cash_Android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
