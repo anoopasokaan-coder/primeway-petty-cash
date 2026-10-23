@@ -1,4 +1,4 @@
-name: Build PrimeWay Android V11
+name: Build PrimeWay Android V11 New Installation
 
 on:
   workflow_dispatch:
@@ -27,7 +27,7 @@ jobs:
         with:
           gradle-version: '8.9'
       - name: Extract application
-        run: unzip PrimeWay_Lollybird_Petty_Cash_Android_V11.zip -d source
+        run: unzip PrimeWay_Android_V11_New_Installation_Source.zip -d source
       - name: Check ledger, transfer and V11 regression tests
         working-directory: source/PrimeWay_Petty_Cash_Android
         run: |
@@ -35,23 +35,27 @@ jobs:
       - name: Install Android build tools
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
-      - name: Restore existing Fresh app signing key
-        uses: actions/cache@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: primeway-fresh-android-signing-v10
-      - name: Require the existing update signing key
+      - name: Restore permanent V11 installation signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PRIMEWAY_V11_KEYSTORE_BASE64 }}
         run: |
-          if [ ! -f "$HOME/.android/debug.keystore" ]; then
-            echo "Existing V10 Fresh signing key was not restored. Stop: recover the matching key before building an update. Do not uninstall or generate a replacement key."
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "Missing PRIMEWAY_V11_KEYSTORE_BASE64. Follow the key setup guide first."
             exit 1
           fi
+          mkdir -p "$HOME/.android"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
+          chmod 600 "$HOME/.android/debug.keystore"
+          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey
       - name: Test and build APK
         working-directory: source/PrimeWay_Petty_Cash_Android
         run: gradle --no-daemon testDebugUnitTest assembleDebug
       - name: Save APK
         uses: actions/upload-artifact@v4
         with:
-          name: PrimeWay-Android-V11
+          name: PrimeWay-Android-V11-New-Installation
           path: source/PrimeWay_Petty_Cash_Android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+      - name: Remove signing key from runner
+        if: always()
+        run: rm -f "$HOME/.android/debug.keystore"
