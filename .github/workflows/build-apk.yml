@@ -1,4 +1,4 @@
-name: Build PrimeWay Fresh Android V10
+name: Build PrimeWay Android V11
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - name: Download repository
         uses: actions/checkout@v6
@@ -18,32 +18,40 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.9'
-      - name: Extract fresh application
-        run: unzip PrimeWay_Lollybird_Petty_Cash_Android_V10_Fresh.zip -d source
+      - name: Extract application
+        run: unzip PrimeWay_Lollybird_Petty_Cash_Android_V11.zip -d source
+      - name: Check ledger, transfer and V11 regression tests
+        working-directory: source/PrimeWay_Petty_Cash_Android
+        run: |
+          for test in test-*.cjs; do node "$test" || exit 1; done
       - name: Install Android build tools
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
-      - name: Restore fresh app signing key
-        id: signing
+      - name: Restore existing Fresh app signing key
         uses: actions/cache@v4
         with:
           path: ~/.android/debug.keystore
           key: primeway-fresh-android-signing-v10
-      - name: Create key for first fresh build
-        if: steps.signing.outputs.cache-hit != 'true'
+      - name: Require the existing update signing key
         run: |
-          mkdir -p "$HOME/.android"
-          keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            echo "Existing V10 Fresh signing key was not restored. Stop: recover the matching key before building an update. Do not uninstall or generate a replacement key."
+            exit 1
+          fi
       - name: Test and build APK
         working-directory: source/PrimeWay_Petty_Cash_Android
         run: gradle --no-daemon testDebugUnitTest assembleDebug
-      - name: Save downloadable APK
+      - name: Save APK
         uses: actions/upload-artifact@v4
         with:
-          name: PrimeWay-Fresh-Android-V10
+          name: PrimeWay-Android-V11
           path: source/PrimeWay_Petty_Cash_Android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
